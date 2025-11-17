@@ -3,6 +3,8 @@ import https from 'https';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { hostname } from 'os';
+import { error } from 'console';
 
 // --- Configuration ---
 const __filename = fileURLToPath(import.meta.url);
@@ -83,11 +85,37 @@ function main() {
 
     // If cache is empty or stale, fetch from API.
     console.log(`Fetching new data for ${userName}`);
-    // This is where you'll put your 'https.get' call (Phase 4)
-    // Inside your API call's 'end' event, you will:
-    //    const freshData = JSON.parse(rawData);
-    //    setCachedData(userName, freshData); // Save the new data
-    //    displayActivity(freshData); // Display the new data
+    
+    // create request options
+    const options = {
+        hostname: "api.github.com",
+        path: `/users/${userName}/events`,
+        method: 'GET',
+        headers: {
+            'User-Agent': 'node.js-github-activity-app'
+        }
+    }
+
+    // Make API Request
+    https.get(options, (res) => {
+        const status = res.statusCode;
+        if(status === 404) {
+            console.error('User not found!')
+        } else if(status != 404 && status != 200) {
+            console.error('Error fetching data: ', res.statusMessage);
+        }
+
+        // Assemble data chunks
+        let rawData = ''
+        res.on('data', chunk => rawData += chunk);
+        res.on('end', () => {
+            // Inside your API call's 'end' event, you will:
+               const freshData = JSON.parse(rawData);
+               setCache(userName, freshData); // Save the new data
+            //    displayActivity(freshData); // Display the new data
+        })
+    })
+    .on('error', (err) => (console.error('Error making API Request: ', err.message)));
 }
 
 main();
