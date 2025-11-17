@@ -1,10 +1,8 @@
-#!/user/bin/env node
+#!/usr/bin/env node
 import https from 'https';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { hostname } from 'os';
-import { error } from 'console';
 
 // --- Configuration ---
 const __filename = fileURLToPath(import.meta.url);
@@ -72,6 +70,65 @@ function setCache(username, data) {
     }
 }
 
+function displayActivity(events) {
+    try {
+        if(!events || events.length === 0) {
+             console.log('No recent activity found.');
+             return;
+        }
+
+        if (events.message) {
+            console.error('Error fetching data:', events.message);
+            return;
+        }
+
+        events.forEach(event => {
+            let repoName; // Define repoName outside the switch for broader use
+            switch(event.type) {
+                
+                case 'PushEvent':
+                    repoName = event.repo.name;
+                    
+                    // Check if the commits array exists first
+                    const commits = event.payload.commits;
+                    if (commits && commits.length > 0) {
+                        const commitsLength = commits.length;
+                        console.log(`- Pushed ${commitsLength} commit(s) to ${repoName}`);
+                    } else {
+                        // This handles pushes with no commits (e.g., new branches)
+                        console.log(`- Pushed to ${repoName}`);
+                    }
+                    
+                    break; 
+
+                case 'IssuesEvent':
+                    repoName = event.repo.name;
+                    const action = event.payload.action; //open or close
+                    const issueTitle = event.payload.issue.title;
+                    console.log(`- ${action} issue '${issueTitle}' in ${repoName}`);
+                    break;
+                    
+                case 'WatchEvent':
+                    repoName = event.repo.name;
+                    console.log(`- Starred repo ${repoName}`);
+                    break;
+                
+                case 'CreateEvent':
+                    const refType = event.payload.ref_type;
+                    repoName = event.repo.name;
+                    if (refType === 'repository') {
+                        console.log(`- Created new repository ${repoName}`);
+                    } else if (refType === 'branch') {
+                        console.log(`- Created new branch in ${repoName}`);
+                    }
+                    break; 
+            }
+        });
+    } catch (error) {
+        console.error("Error displaying activity:", error.message); 
+    }
+}
+
 function main() {
     // Try to get data from cache
     const cachedData = getCachedData(userName);
@@ -79,7 +136,7 @@ function main() {
     if(cachedData) {
         // If cache is valid, display it
         console.log('--- Activity (from cache) ---');
-        console.log(cachedData);
+        displayActivity(cachedData);
         return ;
     }
 
@@ -101,18 +158,23 @@ function main() {
         const status = res.statusCode;
         if(status === 404) {
             console.error('User not found!')
-        } else if(status != 404 && status != 200) {
+            return; // <-- FIX: Added return
+        } else if(status !== 200) {
             console.error('Error fetching data: ', res.statusMessage);
+            return;
         }
 
         // Assemble data chunks
         let rawData = ''
         res.on('data', chunk => rawData += chunk);
         res.on('end', () => {
-            // Inside your API call's 'end' event, you will:
-               const freshData = JSON.parse(rawData);
-               setCache(userName, freshData); // Save the new data
-            //    displayActivity(freshData); // Display the new data
+            try {
+                const freshData = JSON.parse(rawData);
+                setCache(userName, freshData); // Save the new data
+                displayActivity(freshData); // Display the new data
+            } catch (error) {
+                console.error("Failed to parse API response:", error.message);
+            }
         })
     })
     .on('error', (err) => (console.error('Error making API Request: ', err.message)));
