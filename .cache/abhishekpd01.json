@@ -1,5 +1,32 @@
 [
   {
+    "id": "6010707586",
+    "type": "CreateEvent",
+    "actor": {
+      "id": 141522560,
+      "login": "abhishekpd01",
+      "display_login": "abhishekpd01",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/abhishekpd01",
+      "avatar_url": "https://avatars.githubusercontent.com/u/141522560?"
+    },
+    "repo": {
+      "id": 1098152516,
+      "name": "abhishekpd01/Github-User-Activity-CLI-App",
+      "url": "https://api.github.com/repos/abhishekpd01/Github-User-Activity-CLI-App"
+    },
+    "payload": {
+      "ref": "main",
+      "ref_type": "branch",
+      "full_ref": "refs/heads/main",
+      "master_branch": "main",
+      "description": null,
+      "pusher_type": "user"
+    },
+    "public": true,
+    "created_at": "2025-11-17T10:21:34Z"
+  },
+  {
     "id": "4709739089",
     "type": "WatchEvent",
     "actor": {
